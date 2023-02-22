@@ -1,0 +1,66 @@
+import logging
+from aiogram import Bot, Dispatcher, executor, types
+import subprocess
+
+
+#------------------FOR SECURITY--------------------#
+# from middlewares import AccessMiddleware         #
+# ACCESS_ID = "YOU_ID"                             #
+# dp.middleware.setup(AccessMiddleware(ACCESS_ID)) #
+#--------------------------------------------------#
+
+
+API_TOKEN = "{{ telegram_token }}"
+logging.basicConfig(level=logging.INFO)
+bot = Bot(token=API_TOKEN)
+dp = Dispatcher(bot)
+ID_PROFILE_ADMIN = {{ id_profile_admin }}
+
+
+@dp.message_handler(commands=["start", "help"])
+async def send_welcome(message: types.Message):
+    if message.chat.id == ID_PROFILE_ADMIN:
+        await message.answer("Привет!\nИспользуй: 'Книга бойцовский клуб'\nИспользуй: 'Vpn username/off/on'\nИспользуй: 'Site off/on'\nЛибо же просто пиши команды, как будто это терминал!")
+    else:
+        await message.answer("Привет!\nОтправь мне предложение, которое начинается со слова 'Книга' и после него идёт название книги\nПример: 'Книга война и мир'")
+
+
+@dp.message_handler(lambda message: message.text.startswith("Книга"))
+async def book(message: types.Message):
+    bookname = message.text.split("Книга")[-1].strip()
+    if bookname:
+        await message.answer("Ещё не работает :(") # ЛОГИКА ДОСТАВАНИЯ КНИГИ
+    else:
+        await message.answer("Укажи название книги")
+
+@dp.message_handler(lambda message: message.text.startswith("Vpn"))
+async def echo(message: types.Message):
+    if message.chat.id == ID_PROFILE_ADMIN:
+        cmd = message.text.split("Vpn")[-1].strip()
+        if cmd == "off":
+		subprocess.run(["systemctl", "stop", "strongswan"], stdout=subprocess.PIPE, text=True).stdout
+            await message.answer("VPN stopped!")
+        elif cmd == "on":
+            subprocess.run(["systemctl", "start", "strongswan"], stdout=subprocess.PIPE, text=True).stdout
+            await message.answer("VPN started!")
+        else:
+            new_user = cmd
+            result = subprocess.run(["python3", "/opt/python/create_user_to_strongswan.py", new_user], stdout=subprocess.PIPE, text=True).stdout
+            if 'Successfully' in result:    
+                with open(f"/opt/python/config/{new_user}.mobileconfig", "rb") as file:
+                    await message.answer_document(file, caption=result)
+            else:
+                await message.answer(result)
+    else:
+        await message.reply("Как отвечать на это меня ещё не научили. Пожалуйста, отправь команду: /help")
+
+
+@dp.message_handler()
+async def echo(message: types.Message):
+    if message.chat.id == ID_PROFILE_ADMIN:
+        await message.answer(subprocess.run(str(message.text[:1].lower() + message.text[1:]).split(" "), stdout=subprocess.PIPE, text=True).stdout)
+    else:
+        await message.reply("Как отвечать на это меня ещё не научили. Пожалуйста, отправь команду: /help")
+
+if __name__ == "__main__":
+    executor.start_polling(dp, skip_updates=True)

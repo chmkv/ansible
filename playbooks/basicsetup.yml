@@ -1,0 +1,18 @@
+---
+- name: Playbook for basic setup
+  hosts: all
+  gather_facts: yes
+
+  tasks:
+  
+    - name: Run role
+      include_role:
+        name: basicsetup
+      when: server_status == "new" and user_name is defined and user_name != None
+      register: result
+
+    - name: Help information
+      debug:
+        msg: "Please use extra vars user_name (Example: -e user_name='...' -e server_status='new')"
+      when: result.skipped is defined
+      

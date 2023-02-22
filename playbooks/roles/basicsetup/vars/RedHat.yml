@@ -1,0 +1,4 @@
+---
+user_group: wheel
+firewall_name: firewalld
+iptables_name: iptables-services

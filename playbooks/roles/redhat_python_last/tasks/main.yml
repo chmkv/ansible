@@ -1,0 +1,76 @@
+---
+- name: Check python
+  shell: "python3 -V"
+  register: check
+  ignore_errors: yes
+
+- block:
+  - name: Install dependencies
+    yum:
+      name:
+        - "openssl-devel"
+        - "bzip2-devel"
+        - "libffi-devel"
+      state: latest
+
+  - name: Install tools
+    yum:
+      name: "@Development tools"
+      state: present
+
+  - name: Create dir for build
+    file:
+      path: "/opt/forbuild"
+      state: directory
+      mode: 0755
+
+  - name: Get and unarchive openssl
+    unarchive:
+      src: "https://ftp.openssl.org/source/openssl-1.1.1t.tar.gz"
+      dest: "/opt/forbuild/"
+      remote_src: yes
+
+  - name: Configure openssl
+    command: "{{ item }}"
+    args:
+      chdir: "/opt/forbuild/openssl-1.1.1t"
+    with_items:
+      - "./config --prefix=/usr --openssldir=/etc/ssl --libdir=lib no-shared zlib-dynamic"
+      - "make install"
+
+  - name: Get and unarchive python
+    unarchive:
+      src: "https://www.python.org/ftp/python/3.11.0/Python-3.11.0.tgz"
+      dest: "/opt/forbuild/"
+      remote_src: yes
+    
+  - name: Configure python
+    command: "{{ item }}"
+    args:
+      chdir: "/opt/forbuild/Python-3.11.0"
+    with_items:
+      - "./configure --with-openssl=/usr"
+      - "make install"
+
+  - name: Pip install certifi
+    shell: "pip3 install certifi"
+
+  - name: Delete dir
+    file:
+      path: "/opt/forbuild/"
+      state: absent
+
+  - name: Create symbolic link to python3
+    file:
+      src: "/usr/local/bin/python3.11"
+      dest: "/usr/bin/python3"
+      state: link
+  when: "'3.11' not in check.stdout"
+
+- name: Check result
+  shell: "python3 -V"
+  register: result
+
+- name: Log information
+  debug:
+    msg: "{{ result.stdout }}"

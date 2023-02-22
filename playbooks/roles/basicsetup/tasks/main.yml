@@ -1,0 +1,135 @@
+---
+- name: Select vars
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_os_family }}.yml"
+    - default.yml
+
+- block:
+  - name: Upgrade all packages for RedHat
+    yum:
+      update_cache: yes
+      name: "*"
+      state: latest
+  - name: Install python3 and iptables for RedHat
+    yum:
+      name:
+        - python3
+        - "{{ iptables_name }}"
+      state: latest
+  when: ansible_os_family == "RedHat"
+
+- block:
+  - name: Upgrade all packages for Debian
+    apt:
+      update_cache: yes
+      upgrade: full
+  - name: Install python3 and iptables for Debian
+    apt:
+      name:
+        - python3
+        - "{{ iptables_name }}"
+      state: latest
+  when: ansible_os_family == "Debian"
+
+- name: Install python3 and iptables for other system
+  package:
+    name:
+      - python3
+      - iptables
+    state: latest
+  when: ansible_os_family != "Debian" and ansible_os_family != "RedHat"
+
+- name: Generate password
+  shell: "echo $RANDOM | md5sum | head -c 32"
+  register: user_password
+
+- name: Set user
+  user:
+    name: "{{ user_name }}"
+    password: "{{ user_password.stdout | password_hash('sha512') }}"
+    group: "{{ user_group }}"
+    shell: "/bin/bash"
+    update_password: always
+    system: true
+    createhome: yes
+    home: "/home/{{ user_name }}"
+    generate_ssh_key: yes
+    ssh_key_bits: 2048
+
+- name: Copy pubkey
+  authorized_key:
+    user: "{{ user_name }}"
+    state: present
+    key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+
+- name: Copy ssh config
+  copy:
+    src: sshd_config
+    dest: "/etc/ssh/sshd_config"
+
+- name: Disable {{ firewall_name }}
+  service:
+    name: "{{ firewall_name }}"
+    state: stopped
+    enabled: false
+  when: firewall_name is defined and firewall_name != None
+
+- name: Create dir for iptables
+  file:
+    path: /opt/iptables
+    state: directory
+    mode: 0755
+
+- name: Copy templates for iptables
+  template:
+    src: iptables_basicsetup.sh.j2
+    dest: /opt/iptables/iptables_basicsetup.sh
+    mode: 0755
+
+- name: Enable IP forwarding and disable IPv6
+  sysctl:
+    name: "{{ item }}"
+    value: 1
+    sysctl_set: yes
+    state: present
+    reload: yes
+  loop:
+    - net.ipv4.ip_forward
+    - net.ipv6.conf.all.disable_ipv6
+    - net.ipv6.conf.default.disable_ipv6
+
+- name: Find interpreter dir
+  shell: "which python3"
+  register: python_dir
+
+- name: Find timezone
+  shell: "cat /etc/timezone"
+  delegate_to: localhost
+  register: tz_host
+
+- name: Set timezone
+  timezone:
+    name: "{{ tz_host.stdout }}"
+
+- name: Restart ssh
+  service:
+    name: sshd
+    state: restarted
+  async: 0
+  poll: 0
+
+- name: Set iptables conf
+  shell: "bash /opt/iptables/iptables_basicsetup.sh"
+  async: 0
+  poll: 0
+
+- name: Log information
+  debug:
+    msg: "Password for {{ user_name }} is {{ user_password.stdout }}"
+
+- name: Create hosts
+  template:
+    src: hosts.j2
+    dest: hosts
+  delegate_to: localhost

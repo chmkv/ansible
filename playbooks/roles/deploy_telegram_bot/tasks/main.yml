@@ -1,0 +1,22 @@
+---
+- name: Create dir for python
+  file:
+    path: "/opt/python/{{ item }}"
+    state: directory
+    mode: 0755
+  loop:
+    - data
+    - config
+
+- name: Install aiogram
+  pip:
+    name: aiogram
+
+- name: Copy bot
+  template:
+    src: smartbot.py.j2
+    dest: "/opt/python/smartbot.py"
+    mode: 0755
+
+- name: Run bot
+  shell: "nohup python3 /opt/python/smartbot.py &"

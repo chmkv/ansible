@@ -1,0 +1,7 @@
+Port 12022
+PermitRootLogin no
+PubkeyAuthentication yes
+AuthorizedKeysFile .ssh/authorized_keys
+PasswordAuthentication no
+X11Forwarding yes
+Subsystem sftp /usr/libexec/openssh/sftp-server

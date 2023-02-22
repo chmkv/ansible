@@ -1,0 +1,24 @@
+#!/bin/bash
+
+iptables -F
+iptables -F -t nat
+iptables -F -t mangle
+iptables -X
+iptables -t nat -X
+iptables -t mangle -X
+
+iptables -P INPUT DROP
+iptables -P OUTPUT DROP
+iptables -P FORWARD DROP
+
+iptables -A INPUT -p tcp --dport 12022 -j ACCEPT
+iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+
+iptables -A INPUT -p all -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A OUTPUT -p all -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A FORWARD -p all -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A OUTPUT -o {{ ansible_default_ipv4.interface }} -j ACCEPT
+iptables -A FORWARD -i lo -o {{ ansible_default_ipv4.interface }} -j ACCEPT
+iptables -A INPUT -i lo -j ACCEPT
+iptables -A OUTPUT -o lo -j ACCEPT

@@ -1,0 +1,4 @@
+---
+user_group: sudo
+firewall_name: ufw
+iptables_name: iptables

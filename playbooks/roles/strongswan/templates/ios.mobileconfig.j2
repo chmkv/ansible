@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+<key>PayloadContent</key>
+<array>
+<dict>
+<key>PayloadCertificateFileName</key>
+<string>cert.pem</string>
+<key>PayloadContent</key>
+<data>
+{{ content_cert.stdout }}
+</data>
+<key>PayloadDescription</key>
+<string>Adds a certificate</string>
+<key>PayloadDisplayName</key>
+<string>cert.pem</string>
+<key>PayloadIdentifier</key>
+<string>com.apple.security.pkcs12.{{ uuid.results[0].stdout }}</string>
+<key>PayloadType</key>
+<string>com.apple.security.pem</string>
+<key>PayloadUUID</key>
+<string>{{ uuid.results[0].stdout }}</string>
+<key>PayloadVersion</key>
+<integer>1</integer>
+</dict>
+<dict>
+<key>UserDefinedName</key>
+<string>{{ ansible_user }}</string>
+<key>PayloadDisplayName</key>
+<string>{{ ansible_nodename }}</string>
+<key>PayloadIdentifier</key>
+<string>swan.vpn.always</string>
+<key>PayloadUUID</key>
+<string>{{ uuid.results[1].stdout }}</string>
+<key>VPNType</key>
+<string>IKEv2</string>
+<key>IKEv2</key>
+<dict>
+<key>RemoteAddress</key>
+<string>{{ ansible_default_ipv4.address }}</string>
+<key>RemoteIdentifier</key>
+<string>{{ ansible_default_ipv4.address }}</string>
+<key>LocalIdentifier</key>
+<string></string>
+<key>AuthenticationMethod</key>
+<string>None</string>
+<key>DeadPeerDetectionRate</key>
+<string>Medium</string>
+<key>DisableMOBIKE</key>
+<integer>0</integer>
+<key>DisableRedirect</key>
+<integer>0</integer>
+<key>EnableCertificateRevocationCheck</key>
+<integer>0</integer>
+<key>EnablePFS</key>
+<integer>0</integer>
+<key>ExtendedAuthEnabled</key>
+<true/>
+<key>IKESecurityAssociationParameters</key>
+<dict>
+<key>DiffieHellmanGroup</key>
+<integer>2</integer>
+<key>EncryptionAlgorithm</key>
+<string>3DES</string>
+<key>IntegrityAlgorithm</key>
+<string>SHA1-96</string>
+<key>LifeTimeInMinutes</key>
+<integer>1440</integer>
+</dict>
+<key>AuthName</key>
+<string>{{ ansible_user }}</string>
+<key>AuthPassword</key>
+<string>{{ user_password.stdout }}</string>
+</dict>
+<key>OverridePrimary</key>
+<true/>
+<key>IPv4</key>
+<dict>
+<key>OverridePrimary</key>
+<integer>1</integer>
+</dict>
+<key>PayloadType</key>
+<string>com.apple.vpn.managed</string>
+<key>PayloadVersion</key>
+<integer>1</integer>
+</dict>
+</array>
+<key>PayloadDisplayName</key>
+<string>{{ ansible_nodename }}</string>
+<key>PayloadIdentifier</key>
+<string>{{ uuid.results[2].stdout }}</string>
+<key>PayloadRemovalDisallowed</key>
+<false/>
+<key>PayloadType</key>
+<string>Configuration</string>
+<key>PayloadUUID</key>
+<string>{{ uuid.results[3].stdout }}</string>
+<key>PayloadVersion</key>
+<integer>1</integer>
+</dict>
+</plist>

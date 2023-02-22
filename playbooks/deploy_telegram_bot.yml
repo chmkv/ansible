@@ -1,0 +1,18 @@
+---
+- name: Playbook for deploy python telegram bot
+  hosts: all
+  gather_facts: no
+  become: yes
+
+  tasks:
+
+    - name: Run role
+      include_role:
+        name: deploy_telegram_bot
+      when: telegram_token is defined and telegram_token != None and id_profile_admin is defined and id_profile_admin != None
+      register: result
+
+    - name: Log information
+      debug:
+        msg: "Please use extra vars telegram_token (Example: -e telegram_token='...' -e id_profile_admin='...')"
+      when: result.skipped is defined

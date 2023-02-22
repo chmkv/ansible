@@ -1,0 +1,41 @@
+---
+- name: Create dir for python
+  file:
+    path: "/opt/python/{{ item }}"
+    state: directory
+    mode: 0755
+  loop:
+    - data
+    - config
+
+- name: Copy script
+  copy:
+    src: create_user_to_strongswan.py
+    dest: "/opt/python/create_user_to_strongswan.py"
+    mode: 0755
+
+- name: Generate uuid
+  shell: "python3 -c 'import uuid; print(uuid.uuid4())'"
+  register: uuid
+  with_sequence: start=0 end=3
+
+- name: Copy config
+  template:
+    src: ios.mobileconfig.j2
+    dest: "/opt/python/config/ios.mobileconfig"
+    mode: 0755
+
+- name: Run script
+  shell: "python3 /opt/python/create_user_to_strongswan.py {{ new_user }}"
+  register: create_output
+
+- name: Copy mobileconfig
+  fetch:
+    src: "/opt/python/config/{{ new_user }}.mobileconfig"
+    dest: "files_or_configs/{{ new_user }}.mobileconfig"
+    flat: yes
+  when: "'Successfully' in create_output.stdout"
+
+- name: Log information
+  debug:
+    msg: "{{ create_output.stdout }}"

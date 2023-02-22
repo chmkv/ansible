@@ -1,0 +1,9 @@
+---
+- name: Playbook for install strongswan vpn
+  hosts: all
+  gather_facts: yes
+  become: yes
+
+  roles:
+    - role: strongswan
+      when: ansible_os_family == "RedHat" or ansible_os_family == "Debian"

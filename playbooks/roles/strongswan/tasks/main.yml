@@ -1,0 +1,108 @@
+---
+- name: Install need packages for RedHat
+  yum:
+    name: "{{ item }}"
+    state: latest
+  loop:
+   - epel-release
+   - strongswan
+   - haveged
+  when: ansible_os_family == "RedHat"
+
+- name: Install need packages for Debian
+  apt:
+    name: "{{ item }}"
+    state: latest
+  loop:
+   - haveged
+   - strongswan
+   - strongswan-pki
+   - libcharon-extra-plugins
+   - libcharon-extauth-plugins
+   - libstrongswan-extra-plugins
+  when: ansible_os_family == "Debian"
+
+- name: Generate certs and keys
+  shell: "{{ item }}"
+  loop:
+    - "strongswan pki --gen --type rsa --size 4096 --outform pem > /etc/strongswan/ipsec.d/private/ca-key.pem"
+    - "strongswan pki --self --ca --lifetime 3650 --in /etc/strongswan/ipsec.d/private/ca-key.pem --type rsa --dn 'CN={{ ansible_nodename }}' --outform pem > /etc/strongswan/ipsec.d/cacerts/ca-cert.pem"
+    - "strongswan pki --gen --type rsa --size 4096 --outform pem > /etc/strongswan/ipsec.d/private/server-key.pem"
+    - "strongswan pki --pub --in /etc/strongswan/ipsec.d/private/server-key.pem --type rsa | strongswan pki --issue --lifetime 1825 --cacert /etc/strongswan/ipsec.d/cacerts/ca-cert.pem --cakey /etc/strongswan/ipsec.d/private/ca-key.pem --dn 'CN={{ ansible_default_ipv4.address }}' --san @{{ ansible_default_ipv4.address }} --san {{ ansible_default_ipv4.address }} --flag serverAuth --flag ikeIntermediate --outform pem > /etc/strongswan/ipsec.d/certs/server-cert.pem"
+
+- name: Generate password
+  shell: "echo $RANDOM | md5sum | head -c 16"
+  register: user_password
+
+- name: Copy templates
+  template:
+    src: "{{ item }}.j2"
+    dest: "/etc/strongswan/{{ item }}"
+    mode: 0711
+  loop:
+    - "ipsec.conf"
+    - "ipsec.secrets"
+
+- name: Reloads and enables on boot
+  service:
+    name: "{{ item }}"
+    state: restarted
+    enabled: yes
+  loop:
+   - strongswan
+   - haveged
+
+- name: Disable redirects
+  sysctl:
+    name: "{{ item }}"
+    value: 0
+    sysctl_set: yes
+    state: present
+    reload: yes
+  loop:
+    - net.ipv4.conf.all.accept_redirects
+    - net.ipv4.conf.all.send_redirects
+
+- name: Copy templates for iptables
+  template:
+    src: iptables_strongswan.sh.j2
+    dest: /opt/iptables/iptables_strongswan.sh
+    mode: 0755
+
+- name: Set iptables conf
+  shell: "bash /opt/iptables/iptables_strongswan.sh"
+  async: 0
+  poll: 0
+
+- name: Create content.ca-cert
+  shell: "cp /etc/strongswan/ipsec.d/cacerts/ca-cert.pem /etc/strongswan/ipsec.d/cacerts/content.ca-cert && sed -i '1d; $d' /etc/strongswan/ipsec.d/cacerts/content.ca-cert"
+
+- name: Create content.ca-cert
+  shell: "cat /etc/strongswan/ipsec.d/cacerts/content.ca-cert"
+  register: content_cert
+
+- name: Generate uuid
+  shell: "python3 -c 'import uuid; print(uuid.uuid4())'"
+  register: uuid
+  with_sequence: start=0 end=3
+
+- name: Create mobileconfig
+  template:
+    src: ios.mobileconfig.j2
+    dest: "/etc/strongswan/{{ ansible_user }}.mobileconfig"
+
+- name: Copy ca-cert.pem
+  fetch:
+    src: "/etc/strongswan/ipsec.d/cacerts/ca-cert.pem"
+    dest: "files_or_configs/ca-cert.pem"
+    flat: yes                                                      
+
+- name: Copy mobileconfig
+  fetch:
+    src: "/etc/strongswan/{{ ansible_user }}.mobileconfig"
+    dest: "files_or_configs/{{ ansible_user }}.mobileconfig"
+    flat: yes
+
+- name: Log information
+  debug:
+    msg: "Password for {{ ansible_user }} is {{ user_password.stdout }}"

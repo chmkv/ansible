@@ -1,0 +1,10 @@
+---
+- name: Playbook for install last python in RedHat
+  hosts: all
+  gather_facts: yes
+  become: yes
+
+  roles:
+    - role: redhat_python_last
+      when: ansible_os_family == "RedHat"
+      

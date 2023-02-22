@@ -1,0 +1,18 @@
+---
+- name: Playbook for create new user to strongswan vpn
+  hosts: all
+  gather_facts: yes
+  become: yes
+
+  tasks:
+
+    - name: Run role
+      include_role:
+        name: create_user_to_strongswan
+      when: new_user is defined and new_user != None
+      register: result
+
+    - name: Help information
+      debug:
+        msg: "Please use extra vars new_user (Example: -e new_user='...')"
+      when: result.skipped is defined

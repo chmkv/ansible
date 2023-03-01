@@ -1,0 +1,4 @@
+---
+vpn: "ipsec"
+vpn_path: "/etc/ipsec.d"
+vpn_conf_and_secrets_path: "/etc"

@@ -1,4 +1,10 @@
 ---
+- name: Select vars
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_os_family }}.yml"
+    - default.yml
+
 - name: Create dir for python
   file:
     path: "/opt/python/{{ item }}"
@@ -9,8 +15,8 @@
     - config
 
 - name: Copy script
-  copy:
-    src: create_user_to_strongswan.py
+  template:
+    src: create_user_to_strongswan.py.j2
     dest: "/opt/python/create_user_to_strongswan.py"
     mode: 0755
 

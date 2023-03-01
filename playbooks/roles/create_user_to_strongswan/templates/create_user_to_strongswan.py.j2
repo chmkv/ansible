@@ -1,7 +1,7 @@
 import sys, os, hashlib
 
 def content() -> str:
-    with open("/etc/strongswan/ipsec.secrets", "r") as file:
+    with open("{{ vpn_conf_and_secrets_path }}/ipsec.secrets", "r") as file:
         ipsecsecrets = file.read()
     return ipsecsecrets
 
@@ -14,14 +14,14 @@ def check(name) -> bool:
 def add(name) -> str:
     password = hashlib.md5(os.urandom(256)).hexdigest()
     base = content()
-    with open("/etc/strongswan/ipsec.secrets", "w") as file:
+    with open("{{ vpn_conf_and_secrets_path }}/ipsec.secrets", "w") as file:
         file.write(f'{base}\n{name} : EAP "{ password }"\n')
     return password
 
 def config(name, password) -> str:
     with open("/opt/python/config/ios.mobileconfig", "r") as file:
         ios = file.read()
-    with open("/etc/strongswan/ipsec.d/cacerts/content.ca-cert", "r") as file:
+    with open("{{ vpn_path }}/cacerts/content.ca-cert", "r") as file:
         cert = file.read()
     ios = ios.replace("CERTIFICATE_CONTENT", cert)
     ios = ios.replace("LOGIN_CONTENT", name)

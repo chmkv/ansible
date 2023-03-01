@@ -28,10 +28,13 @@
    - libstrongswan-extra-plugins
   when: ansible_os_family == "Debian"
 
-- name: Install strongswan for other system
+- name: Install strongswan and haveged for other system
   package:
-    name: strongswan
+    name: "{{ item }}"
     state: latest
+  loop:
+   - haveged
+   - strongswan
   when: ansible_os_family != "Debian" and ansible_os_family != "RedHat"
 
 - name: Generate certs and keys
@@ -55,7 +58,7 @@
     - "ipsec.conf"
     - "ipsec.secrets"
 
-- name: Reloads and enables on boot
+- name: Reloads and enables on boot for RedHat and other system
   service:
     name: "{{ item }}"
     state: restarted
@@ -63,6 +66,14 @@
   loop:
    - strongswan
    - haveged
+  when: ansible_os_family != "Debian"
+
+- name: Reloads and enables on boot for Debian
+  service:
+    name: "strongswan-starter"
+    state: restarted
+    enabled: yes
+  when: ansible_os_family == "Debian"
 
 - name: Disable redirects
   sysctl:

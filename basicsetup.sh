@@ -9,7 +9,7 @@ cat << EOF > tmp_hosts
 tmp ansible_host=$server_ip ansible_ssh_pass=$root_password ansible_ssh_user=root ansible_ssh_common_args='-o StrictHostKeyChecking=no'
 EOF
 
-if [ -d playbooks/files_or_configs ]; then
+if [ ! -d playbooks/files_or_configs ]; then
 mkdir playbooks/files_or_configs
 fi
 ansible-playbook playbooks/basicsetup.yml -i tmp_hosts -e user_name=$user_name -e server_status='new'

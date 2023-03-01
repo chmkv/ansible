@@ -21,7 +21,7 @@ func() {
 ######################
 help() {
     echo ""
-    echo "Usage: 'sudo bash $0 [option] {1|2|3}'"
+    echo "Usage: './$0 [option] {1|2|3}'"
     echo ""
     echo " 1    -   Playbook for install strongswan vpn"
     echo " 2    -   Playbook for create new user to strongswan vpn (with option: -n)"
@@ -44,14 +44,14 @@ help() {
 ######################
 if [ ! -f hosts ]; then
     echo ""
-    echo "Before start this script, please use: 'sudo bash basicsetup.sh'"
+    echo "Before start this script, please use: './basicsetup.sh'"
     echo ""
     exit
 fi
 if [ -z "$1" ]; then
     echo ""
     echo "Empty list of options"
-    echo "Use: 'sudo bash $0 -h'"
+    echo "Use: './$0 -h'"
     echo ""
     exit
 fi

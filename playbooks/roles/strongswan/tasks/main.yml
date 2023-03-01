@@ -1,4 +1,10 @@
 ---
+- name: Select vars
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_os_family }}.yml"
+    - default.yml
+
 - name: Install need packages for RedHat
   yum:
     name: "{{ item }}"
@@ -22,13 +28,19 @@
    - libstrongswan-extra-plugins
   when: ansible_os_family == "Debian"
 
+- name: Install strongswan for other system
+  package:
+    name: strongswan
+    state: latest
+  when: ansible_os_family != "Debian" and ansible_os_family != "RedHat"
+
 - name: Generate certs and keys
   shell: "{{ item }}"
   loop:
-    - "strongswan pki --gen --type rsa --size 4096 --outform pem > /etc/strongswan/ipsec.d/private/ca-key.pem"
-    - "strongswan pki --self --ca --lifetime 3650 --in /etc/strongswan/ipsec.d/private/ca-key.pem --type rsa --dn 'CN={{ ansible_nodename }}' --outform pem > /etc/strongswan/ipsec.d/cacerts/ca-cert.pem"
-    - "strongswan pki --gen --type rsa --size 4096 --outform pem > /etc/strongswan/ipsec.d/private/server-key.pem"
-    - "strongswan pki --pub --in /etc/strongswan/ipsec.d/private/server-key.pem --type rsa | strongswan pki --issue --lifetime 1825 --cacert /etc/strongswan/ipsec.d/cacerts/ca-cert.pem --cakey /etc/strongswan/ipsec.d/private/ca-key.pem --dn 'CN={{ ansible_default_ipv4.address }}' --san @{{ ansible_default_ipv4.address }} --san {{ ansible_default_ipv4.address }} --flag serverAuth --flag ikeIntermediate --outform pem > /etc/strongswan/ipsec.d/certs/server-cert.pem"
+    - "{{ vpn }} pki --gen --type rsa --size 4096 --outform pem > {{ vpn_path }}/private/ca-key.pem"
+    - "{{ vpn }} pki --self --ca --lifetime 3650 --in {{ vpn_path }}/private/ca-key.pem --type rsa --dn 'CN={{ ansible_nodename }}' --outform pem > {{ vpn_path }}/cacerts/ca-cert.pem"
+    - "{{ vpn }} pki --gen --type rsa --size 4096 --outform pem > {{ vpn_path }}/private/server-key.pem"
+    - "{{ vpn }} pki --pub --in {{ vpn_path }}/private/server-key.pem --type rsa | {{ vpn }} pki --issue --lifetime 1825 --cacert {{ vpn_path }}/cacerts/ca-cert.pem --cakey {{ vpn_path }}/private/ca-key.pem --dn 'CN={{ ansible_default_ipv4.address }}' --san @{{ ansible_default_ipv4.address }} --san {{ ansible_default_ipv4.address }} --flag serverAuth --flag ikeIntermediate --outform pem > {{ vpn_path }}/certs/server-cert.pem"
 
 - name: Generate password
   shell: "echo $RANDOM | md5sum | head -c 16"
@@ -37,7 +49,7 @@
 - name: Copy templates
   template:
     src: "{{ item }}.j2"
-    dest: "/etc/strongswan/{{ item }}"
+    dest: "{{ vpn_conf_and_secrets_path }}/{{ item }}"
     mode: 0711
   loop:
     - "ipsec.conf"
@@ -75,10 +87,10 @@
   poll: 0
 
 - name: Create content.ca-cert
-  shell: "cp /etc/strongswan/ipsec.d/cacerts/ca-cert.pem /etc/strongswan/ipsec.d/cacerts/content.ca-cert && sed -i '1d; $d' /etc/strongswan/ipsec.d/cacerts/content.ca-cert"
+  shell: "cp {{ vpn_path }}/cacerts/ca-cert.pem {{ vpn_path }}/cacerts/content.ca-cert && sed -i '1d; $d' {{ vpn_path }}/cacerts/content.ca-cert"
 
 - name: Create content.ca-cert
-  shell: "cat /etc/strongswan/ipsec.d/cacerts/content.ca-cert"
+  shell: "cat {{ vpn_path }}/cacerts/content.ca-cert"
   register: content_cert
 
 - name: Generate uuid
@@ -89,17 +101,17 @@
 - name: Create mobileconfig
   template:
     src: ios.mobileconfig.j2
-    dest: "/etc/strongswan/{{ ansible_user }}.mobileconfig"
+    dest: "{{ vpn_path }}/{{ ansible_user }}.mobileconfig"
 
 - name: Copy ca-cert.pem
   fetch:
-    src: "/etc/strongswan/ipsec.d/cacerts/ca-cert.pem"
+    src: "{{ vpn_path }}/cacerts/ca-cert.pem"
     dest: "files_or_configs/ca-cert.pem"
     flat: yes                                                      
 
 - name: Copy mobileconfig
   fetch:
-    src: "/etc/strongswan/{{ ansible_user }}.mobileconfig"
+    src: "{{ vpn_path }}/{{ ansible_user }}.mobileconfig"
     dest: "files_or_configs/{{ ansible_user }}.mobileconfig"
     flat: yes
 

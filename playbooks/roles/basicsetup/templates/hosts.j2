@@ -1,2 +1,2 @@
 [vds_or_vps]
-{{ ansible_nodename }} ansible_host={{ ansible_default_ipv4.address }} ansible_user={{ user_name }} ansible_python_interpreter={{ python_dir.stdout }} ansible_port=12022 ansible_ssh_private_key_file=~/.ssh/id_rsa ansible_become_password={{ user_password.stdout }}
+{{ ansible_nodename }} ansible_host={{ ansible_default_ipv4.address }} ansible_user={{ user_name }} ansible_python_interpreter={{ python_dir.stdout }} ansible_port=12022 ansible_ssh_private_key_file=~/.ssh/id_rsa ansible_ssh_transfer_method=scp ansible_become_password={{ user_password.stdout }}
